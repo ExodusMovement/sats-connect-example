@@ -1,11 +1,34 @@
 import { AddressPurpose, BitcoinNetworkType, getAddress } from "sats-connect";
+import { getWallets } from "@wallet-standard/core";
 
 import SendBitcoin from "./components/sendBitcoin";
 import SignMessage from "./components/signMessage";
 import SignTransaction from "./components/signTransaction";
 import { useLocalStorage } from "./useLocalstorage";
 
+import type { BitcoinProvider } from "sats-connect";
+import type { WalletWithFeatures } from "@wallet-standard/core";
+
 import "./App.css";
+
+const SatsConnectNamespace = 'sats-connect:'
+type SatsConnectFeature = {
+  [SatsConnectNamespace]: {
+    provider: BitcoinProvider
+  }
+}
+
+const { get, on } = getWallets();
+let wallets = get();
+on("register", function () {
+  wallets = get()
+});
+
+const getProvider = async (): Promise<BitcoinProvider> => {
+  return (wallets as WalletWithFeatures<SatsConnectFeature>[])
+      ?.find((wallet) => !!wallet.features['sats-connect:']?.provider)
+      ?.features['sats-connect:']?.provider!
+}
 
 function App() {
   const [paymentAddress, setPaymentAddress] = useLocalStorage("paymentAddress");
@@ -65,6 +88,7 @@ function App() {
         setOrdinalsPublicKey(ordinalsAddressItem?.publicKey);
       },
       onCancel: () => alert("Request canceled"),
+      getProvider
     });
   };
 

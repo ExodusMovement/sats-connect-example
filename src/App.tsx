@@ -10,6 +10,7 @@ import type { BitcoinProvider } from "sats-connect";
 import type { WalletWithFeatures } from "@wallet-standard/core";
 
 import "./App.css";
+import SignPaymentTransaction from "./components/signPaymentTransaction";
 
 const SatsConnectNamespace = 'sats-connect:'
 type SatsConnectFeature = {
@@ -125,12 +126,11 @@ function App() {
           <button onClick={onWalletDisconnect}>Disconnect</button>
         </div>
 
-        <SignTransaction
+        <SignPaymentTransaction
           paymentAddress={paymentAddress}
           paymentPublicKey={paymentPublicKey}
-          ordinalsAddress={ordinalsAddress}
-          ordinalsPublicKey={ordinalsPublicKey}
           network={network}
+          getProvider={getProvider}
         />
 
         <SignMessage address={ordinalsAddress} network={network} />

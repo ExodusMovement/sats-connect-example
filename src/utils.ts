@@ -28,6 +28,58 @@ export const getUTXOs = async (
   return response.json();
 };
 
+export const createSelfSendPSBT = async ({
+  networkType,
+  paymentUnspentOutputs,
+  paymentPublicKeyString,
+  recipient
+}: {
+  networkType: BitcoinNetworkType,
+  paymentUnspentOutputs: UTXO[],
+  paymentPublicKeyString: string,
+  recipient: string
+}) => {
+  const network =
+      networkType === BitcoinNetworkType.Testnet ? btc.TEST_NETWORK : btc.NETWORK;
+
+  // choose first unspent output
+  const paymentOutput = paymentUnspentOutputs[0];
+
+  const paymentPublicKey = hex.decode(paymentPublicKeyString);
+
+  const tx = new btc.Transaction();
+
+  // create segwit spend
+  const p2wpkh = btc.p2wpkh(paymentPublicKey, network);
+  const p2sh = btc.p2sh(p2wpkh, network);
+
+  // set transfer amount and calculate change
+  const fee = 300n; // set the miner fee amount
+  const recipientAmount = BigInt(Math.min(paymentOutput.value, 3000)) - fee;
+  const changeAmount =
+      BigInt(paymentOutput.value) - recipientAmount - fee;
+
+  // payment input
+  tx.addInput({
+    txid: paymentOutput.txid,
+    index: paymentOutput.vout,
+    witnessUtxo: {
+      script: p2sh.script ? p2sh.script : Buffer.alloc(0),
+      amount: BigInt(paymentOutput.value),
+    },
+    redeemScript: p2sh.redeemScript ? p2sh.redeemScript : Buffer.alloc(0),
+    witnessScript: p2sh.witnessScript,
+    sighashType: btc.SignatureHash.SINGLE | btc.SignatureHash.ANYONECANPAY,
+  });
+
+  tx.addOutputAddress(recipient, recipientAmount, network);
+  tx.addOutputAddress(recipient, changeAmount, network);
+
+  const psbt = tx.toPSBT(0);
+  const psbtB64 = base64.encode(psbt);
+  return psbtB64;
+}
+
 export const createPSBT = async (
   networkType: BitcoinNetworkType,
   paymentPublicKeyString: string,

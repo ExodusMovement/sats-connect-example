@@ -1,31 +1,26 @@
-import { BitcoinNetworkType } from "sats-connect";
-
 import * as btc from "@scure/btc-signer";
 
 import { signTransaction } from "sats-connect";
 
-import { createPSBT, getUTXOs } from "../utils";
+import { createSelfSendPSBT, getUTXOs } from "../utils";
+
+import type { BitcoinNetworkType, BitcoinProvider} from "sats-connect";
 
 type Props = {
   network: BitcoinNetworkType;
-  ordinalsAddress: string;
   paymentAddress: string;
   paymentPublicKey: string;
-  ordinalsPublicKey: string;
+  getProvider: () => Promise<BitcoinProvider>;
 };
 
 const SignTransaction = ({
   network,
-  ordinalsAddress,
   paymentAddress,
   paymentPublicKey,
-  ordinalsPublicKey,
+  getProvider,
 }: Props) => {
   const onSignTransactionClick = async () => {
-    const [paymentUnspentOutputs, ordinalsUnspentOutputs] = await Promise.all([
-      getUTXOs(network, paymentAddress),
-      getUTXOs(network, ordinalsAddress),
-    ]);
+    const paymentUnspentOutputs = await getUTXOs(network, paymentAddress);
 
     let canContinue = true;
 
@@ -34,28 +29,19 @@ const SignTransaction = ({
       canContinue = false;
     }
 
-    if (ordinalsUnspentOutputs.length === 0) {
-      alert("No unspent outputs found for ordinals address");
-      canContinue = false;
-    }
-
     if (!canContinue) {
       return;
     }
 
-    // create psbt sending from payment address to ordinals address
-    const outputRecipient1 = ordinalsAddress;
-    const outputRecipient2 = paymentAddress;
+    // create psbt sending from payment address to itself
+    const outputRecipient = paymentAddress;
 
-    const psbtBase64 = await createPSBT(
-      network,
-      paymentPublicKey,
-      ordinalsPublicKey,
+    const psbtBase64 = await createSelfSendPSBT({
+      networkType: network,
+      paymentPublicKeyString: paymentPublicKey,
       paymentUnspentOutputs,
-      ordinalsUnspentOutputs,
-      outputRecipient1,
-      outputRecipient2
-    );
+      recipient: outputRecipient,
+    });
 
     await signTransaction({
       payload: {
@@ -70,28 +56,22 @@ const SignTransaction = ({
             address: paymentAddress,
             signingIndexes: [0],
             sigHash: btc.SignatureHash.SINGLE | btc.SignatureHash.ANYONECANPAY,
-          },
-          {
-            address: ordinalsAddress,
-            signingIndexes: [1],
-            sigHash: btc.SignatureHash.SINGLE | btc.SignatureHash.ANYONECANPAY,
-          },
+          }
         ],
       },
       onFinish: (response) => {
         alert(response.psbtBase64);
       },
       onCancel: () => alert("Canceled"),
+      getProvider,
     });
   };
 
   return (
     <div className="container">
-      <h3>Sign transaction</h3>
+      <h3>Sign a self-send transaction</h3>
       <p>
-        Creates a PSBT sending the first UTXO from each of the payment and
-        ordinal addresses to the other address, with the change going to the
-        payment address.
+        Creates a PSBT sending the first UTXO from the payment address to itself with the change.
       </p>
       <div>
         <button onClick={onSignTransactionClick}>Sign Transaction</button>

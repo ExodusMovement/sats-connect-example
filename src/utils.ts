@@ -30,22 +30,22 @@ export const getUTXOs = async (
 
 export const createSelfSendPSBT = async ({
   networkType,
-  paymentUnspentOutputs,
-  paymentPublicKeyString,
+  unspentOutputs,
+  publicKeyString,
   recipient
 }: {
   networkType: BitcoinNetworkType,
-  paymentUnspentOutputs: UTXO[],
-  paymentPublicKeyString: string,
+  unspentOutputs: UTXO[],
+  publicKeyString: string,
   recipient: string
 }) => {
   const network =
       networkType === BitcoinNetworkType.Testnet ? btc.TEST_NETWORK : btc.NETWORK;
 
   // choose first unspent output
-  const paymentOutput = paymentUnspentOutputs[0];
+  const paymentOutput = unspentOutputs[0];
 
-  const paymentPublicKey = hex.decode(paymentPublicKeyString);
+  const paymentPublicKey = hex.decode(publicKeyString);
 
   const tx = new btc.Transaction();
 

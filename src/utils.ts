@@ -1,5 +1,7 @@
 import { base64, hex } from "@scure/base";
 import * as btc from "@scure/btc-signer";
+import { Psbt, payments, networks, initEccLib } from 'bitcoinjs-lib';
+import * as ecc from '@bitcoinerlab/secp256k1';
 
 import { BitcoinNetworkType } from "sats-connect";
 
@@ -14,6 +16,8 @@ export type UTXO = {
   };
   value: number;
 };
+
+initEccLib(ecc);
 
 export const getUTXOs = async (
   network: BitcoinNetworkType,
@@ -79,6 +83,58 @@ export const createSelfSendPSBT = async ({
   const psbtB64 = base64.encode(psbt);
   return psbtB64;
 }
+
+export const createSelfSendOrdinalsPSBT = async ({
+  networkType,
+  unspentOutputs,
+  publicKeyString,
+  recipient
+}: {
+  networkType: BitcoinNetworkType,
+  unspentOutputs: UTXO[],
+  publicKeyString: string,
+  recipient: string
+}) => {
+  const ordinalPublicKey = Buffer.from(publicKeyString, 'hex');
+  const network =
+      networkType === BitcoinNetworkType.Testnet ? networks.testnet : networks.bitcoin;
+
+  // choose first unspent output
+  const ordinalOutput = unspentOutputs[0];
+
+  const psbt = new Psbt();
+
+  const p2pktr = payments.p2tr({
+    pubkey: ordinalPublicKey,
+    network
+  });
+
+  psbt.addInput({
+    hash: ordinalOutput.txid,
+    index: ordinalOutput.vout,
+    witnessUtxo: { value: ordinalOutput.value, script: p2pktr.output! },
+    tapInternalKey: ordinalPublicKey,
+    sighashType: 131,
+  });
+
+  // set transfer amount and calculate change
+  const fee = 300; // set the miner fee amount
+  const recipientAmount = Math.min(ordinalOutput.value, 3000) - fee;
+  const changeAmount =
+      ordinalOutput.value - recipientAmount - fee;
+
+  psbt.addOutput({
+    address: recipient, // faucet address
+    value: recipientAmount
+  });
+  psbt.addOutput({
+    address: recipient, // faucet address
+    value: changeAmount
+  });
+
+  return psbt.toBase64()
+}
+
 
 export const createPSBT = async (
   networkType: BitcoinNetworkType,

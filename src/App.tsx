@@ -10,7 +10,7 @@ import type { BitcoinProvider } from "sats-connect";
 import type { WalletWithFeatures } from "@wallet-standard/core";
 
 import "./App.css";
-import { createSelfSendPSBT } from "./utils";
+import { createSelfSendPSBT, createSelfSendOrdinalsPSBT } from "./utils";
 
 const SatsConnectNamespace = 'sats-connect:'
 type SatsConnectFeature = {
@@ -133,6 +133,15 @@ function App() {
           network={network}
           getProvider={getProvider}
           createSelfSendPSBT={createSelfSendPSBT}
+        />
+
+        <SignTransaction
+          title={'Sign a self-send Ordinals transaction'}
+          address={ordinalsAddress}
+          publicKey={ordinalsPublicKey}
+          network={network}
+          getProvider={getProvider}
+          createSelfSendPSBT={createSelfSendOrdinalsPSBT}
         />
 
         <SignMessage address={ordinalsAddress} network={network} />

@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { BitcoinNetworkType, signMessage } from "sats-connect";
+import { BitcoinNetworkType, BitcoinProvider, signMessage } from "sats-connect";
 
 type Props = {
   network: BitcoinNetworkType;
   address: string;
+  getProvider: () => Promise<BitcoinProvider>;
 };
 
-const SignMessage = ({ network, address }: Props) => {
+const SignMessage = ({ network, address, getProvider }: Props) => {
   const [message, setMessage] = useState("Hello World!");
 
   const onSignMessageClick = async () => {
@@ -20,6 +21,7 @@ const SignMessage = ({ network, address }: Props) => {
         address,
         message,
       },
+      getProvider,
       onFinish: (response) => {
         alert(response);
       },

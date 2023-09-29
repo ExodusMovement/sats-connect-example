@@ -135,7 +135,7 @@ function App() {
           createSelfSendPSBT={createSelfSendPSBT}
         />
 
-        <SignMessage address={ordinalsAddress} network={network} />
+        <SignMessage address={ordinalsAddress} network={network} getProvider={getProvider}/>
 
         <SendBitcoin address={paymentAddress} network={network} />
       </div>

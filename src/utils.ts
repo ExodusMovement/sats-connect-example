@@ -2,6 +2,7 @@ import { base64, hex } from "@scure/base";
 import * as btc from "@scure/btc-signer";
 
 import { BitcoinNetworkType } from "sats-connect";
+import type { Bytes, NETWORK } from "@scure/btc-signer";
 
 export type UTXO = {
   txid: string;
@@ -29,55 +30,77 @@ export const getUTXOs = async (
 };
 
 export const createSelfSendPSBT = async ({
-  networkType,
-  unspentOutputs,
-  publicKeyString,
-  recipient
-}: {
-  networkType: BitcoinNetworkType,
+ unspentOutputs,
+ publicKeyString,
+ recipient,
+ inputType,
+} : {
   unspentOutputs: UTXO[],
-  publicKeyString: string,
   recipient: string
+  publicKeyString: string
+  inputType: string
 }) => {
-  const network =
-      networkType === BitcoinNetworkType.Testnet ? btc.TEST_NETWORK : btc.NETWORK;
+  const network = btc.NETWORK
+  const publicKey = hex.decode(publicKeyString)
 
   // choose first unspent output
-  const paymentOutput = unspentOutputs[0];
+  const utxo = unspentOutputs[0]
 
-  const paymentPublicKey = hex.decode(publicKeyString);
-
-  const tx = new btc.Transaction();
-
-  // create segwit spend
-  const p2wpkh = btc.p2wpkh(paymentPublicKey, network);
-  const p2sh = btc.p2sh(p2wpkh, network);
+  const tx = new btc.Transaction()
 
   // set transfer amount and calculate change
-  const fee = 300n; // set the miner fee amount
-  const recipientAmount = BigInt(Math.min(paymentOutput.value, 3000)) - fee;
-  const changeAmount =
-      BigInt(paymentOutput.value) - recipientAmount - fee;
+  const fee = 300 // set the miner fee amount
+  const recipientAmount = BigInt(Math.min(utxo.value, 3000)) - BigInt(fee)
+  const changeAmount = BigInt(utxo.value) - recipientAmount - BigInt(fee)
 
-  // payment input
-  tx.addInput({
-    txid: paymentOutput.txid,
-    index: paymentOutput.vout,
-    witnessUtxo: {
-      script: p2sh.script ? p2sh.script : Buffer.alloc(0),
-      amount: BigInt(paymentOutput.value),
-    },
-    redeemScript: p2sh.redeemScript ? p2sh.redeemScript : Buffer.alloc(0),
-    witnessScript: p2sh.witnessScript,
-    sighashType: btc.SignatureHash.SINGLE | btc.SignatureHash.ANYONECANPAY,
-  });
+  tx.addInput(
+      // @ts-ignore
+      createInput({
+        inputType,
+        publicKey,
+        network,
+        utxo,
+      })
+  )
 
-  tx.addOutputAddress(recipient, recipientAmount, network);
-  tx.addOutputAddress(recipient, changeAmount, network);
+  tx.addOutputAddress(recipient, recipientAmount, network)
+  tx.addOutputAddress(recipient, changeAmount, network)
 
-  const psbt = tx.toPSBT(0);
-  const psbtB64 = base64.encode(psbt);
-  return psbtB64;
+  const psbt = tx.toPSBT(0)
+  const psbtB64 = base64.encode(psbt)
+  return psbtB64
+}
+
+const createInput = ({ inputType, publicKey, network, utxo }: { inputType: string, publicKey: Bytes, network: typeof NETWORK, utxo: UTXO }) => {
+  if (inputType === 'p2wpkh') {
+    const p2wpkh = btc.p2wpkh(publicKey, network)
+
+    return {
+      txid: utxo.txid,
+      index: utxo.vout,
+      witnessUtxo: {
+        script: p2wpkh.script,
+        amount: BigInt(utxo.value),
+      },
+      sighashType: btc.SignatureHash.ALL | btc.SignatureHash.ANYONECANPAY,
+    }
+  }
+
+  if (inputType === 'p2tr') {
+    const internalPubKey = publicKey.slice(1, 33)
+    const p2tr = btc.p2tr(internalPubKey, undefined, network)
+
+    return {
+      txid: utxo.txid,
+      index: utxo.vout,
+      witnessUtxo: {
+        script: p2tr.script,
+        amount: BigInt(utxo.value),
+      },
+      tapInternalKey: p2tr.tapInternalKey,
+      sighashType: btc.SignatureHash.ALL | btc.SignatureHash.ANYONECANPAY,
+    }
+  }
 }
 
 export const createPSBT = async (

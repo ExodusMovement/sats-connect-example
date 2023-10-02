@@ -41,10 +41,10 @@ const SignTransaction = ({
     const outputRecipient = address;
 
     const psbtBase64 = await createSelfSendPSBT({
-      networkType: network,
       publicKeyString: publicKey,
       unspentOutputs,
       recipient: outputRecipient,
+      inputType: 'p2wpkh'
     });
 
     await signTransaction({
@@ -59,7 +59,7 @@ const SignTransaction = ({
           {
             address,
             signingIndexes: [0],
-            sigHash: btc.SignatureHash.SINGLE | btc.SignatureHash.ANYONECANPAY,
+            sigHash: btc.SignatureHash.ALL | btc.SignatureHash.ANYONECANPAY,
           }
         ],
       },

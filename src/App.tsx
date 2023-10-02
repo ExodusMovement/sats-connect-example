@@ -127,12 +127,21 @@ function App() {
         </div>
 
         <SignTransaction
-          title={'Sign a self-send Payment transaction'}
+          title={'Sign a self-send p2wpkh transaction'}
           address={paymentAddress}
           publicKey={paymentPublicKey}
           network={network}
           getProvider={getProvider}
-          createSelfSendPSBT={createSelfSendPSBT}
+          inputType={'p2wpkh'}
+        />
+
+        <SignTransaction
+          title={'Sign a self-send p2tr transaction'}
+          address={ordinalsAddress}
+          publicKey={ordinalsPublicKey}
+          network={network}
+          getProvider={getProvider}
+          inputType={'p2tr'}
         />
 
         <SignMessage address={ordinalsAddress} network={network} getProvider={getProvider}/>

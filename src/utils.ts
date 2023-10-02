@@ -87,8 +87,8 @@ const createInput = ({ inputType, publicKey, network, utxo }: { inputType: strin
   }
 
   if (inputType === 'p2tr') {
-    const internalPubKey = publicKey.slice(1, 33)
-    const p2tr = btc.p2tr(internalPubKey, undefined, network)
+    // const internalPubKey = publicKey.slice(1, 33)
+    const p2tr = btc.p2tr(publicKey, undefined, network)
 
     return {
       txid: utxo.txid,

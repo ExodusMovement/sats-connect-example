@@ -2,7 +2,7 @@ import * as btc from "@scure/btc-signer";
 
 import { signTransaction } from "sats-connect";
 
-import { getUTXOs } from "../utils";
+import { getUTXOs, createSelfSendPSBT } from "../utils";
 
 import type { BitcoinNetworkType, BitcoinProvider} from "sats-connect";
 
@@ -12,7 +12,7 @@ type Props = {
   address: string;
   publicKey: string;
   getProvider: () => Promise<BitcoinProvider>;
-  createSelfSendPSBT: (args: any) => Promise<string>
+  inputType: string;
 };
 
 const SignTransaction = ({
@@ -21,7 +21,7 @@ const SignTransaction = ({
   address,
   publicKey,
   getProvider,
-  createSelfSendPSBT
+  inputType
 }: Props) => {
   const onSignTransactionClick = async () => {
     const unspentOutputs = await getUTXOs(network, address);
@@ -44,7 +44,7 @@ const SignTransaction = ({
       publicKeyString: publicKey,
       unspentOutputs,
       recipient: outputRecipient,
-      inputType: 'p2wpkh'
+      inputType
     });
 
     await signTransaction({

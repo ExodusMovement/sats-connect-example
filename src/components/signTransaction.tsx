@@ -59,7 +59,7 @@ const SignTransaction = ({
           {
             address,
             signingIndexes: [0],
-            sigHash: btc.SignatureHash.ALL | btc.SignatureHash.ANYONECANPAY,
+            sigHash: 2,
           }
         ],
       },
